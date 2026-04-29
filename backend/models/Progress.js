@@ -13,7 +13,10 @@ const progressSchema = new mongoose.Schema({
     required: true,
     index: true
   },
-  completedTopics: [{
+  completedLessons: [{
+    type: String, // Format: "moduleIndex:lessonIndex"
+  }],
+  completedModules: [{
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Module'
   }],
@@ -26,6 +29,10 @@ const progressSchema = new mongoose.Schema({
     default: 0,
     min: 0,
     max: 100
+  },
+  lastAccessedAt: {
+    type: Date,
+    default: Date.now
   }
 }, { timestamps: true });
 

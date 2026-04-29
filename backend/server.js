@@ -9,6 +9,8 @@ import enrollmentRoutes from './routes/enrollmentRoutes.js';
 import recommendationRoutes from './routes/recommendationRoutes.js';
 import instructorRoutes from './routes/instructorRoutes.js';
 import adminRoutes from './routes/adminRoutes.js';
+import quizRoutes from './routes/quizRoutes.js';
+import progressRoutes from './routes/progressRoutes.js';
 
 dotenv.config();
 
@@ -31,6 +33,8 @@ app.use('/api/enrollments', enrollmentRoutes);
 app.use('/api/recommendations', recommendationRoutes);
 app.use('/api/instructor', instructorRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/quiz', quizRoutes);
+app.use('/api/progress', progressRoutes);
 
 // Basic error handler
 app.use((err, req, res, next) => {

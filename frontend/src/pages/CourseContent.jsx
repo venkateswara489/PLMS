@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState, useRef, useCallback } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { PlayCircle, FileText, CheckCircle, ChevronDown, ChevronUp, MessageSquare, Download } from 'lucide-react';
 import { apiFetch } from '../lib/api';
@@ -11,6 +11,11 @@ const CourseContent = () => {
   const [enrollment, setEnrollment] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [videoProgress, setVideoProgress] = useState(0);
+  const [isVideoPlaying, setIsVideoPlaying] = useState(false);
+  const [playerReady, setPlayerReady] = useState(false);
+  const playerRef = useRef(null);
+  const intervalRef = useRef(null);
 
   const getYouTubeVideoId = (url) => {
     if (!url || typeof url !== 'string') return null;
@@ -110,6 +115,123 @@ const CourseContent = () => {
     }
   }, [course, activeLesson]);
 
+  // Load YouTube IFrame API
+  useEffect(() => {
+    if (!window.YT) {
+      const tag = document.createElement('script');
+      tag.src = 'https://www.youtube.com/iframe_api';
+      const firstScriptTag = document.getElementsByTagName('script')[0];
+      firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
+      
+      window.onYouTubeIframeAPIReady = () => {
+        setPlayerReady(true);
+      };
+    } else {
+      setPlayerReady(true);
+    }
+  }, []);
+
+  // Create YouTube player when lesson changes
+  useEffect(() => {
+    if (!activeLesson || activeLesson.lesson.type !== 'video' || !playerReady) return;
+
+    const videoId = getYouTubeVideoId(getLessonVideoUrl(activeLesson.lesson));
+    if (!videoId) return;
+
+    // Clean up previous player
+    if (playerRef.current && playerRef.current.destroy) {
+      playerRef.current.destroy();
+    }
+
+    // Create new player
+    playerRef.current = new window.YT.Player('youtube-player', {
+      height: '100%',
+      width: '100%',
+      videoId: videoId,
+      playerVars: {
+        autoplay: 0,
+        modestbranding: 1,
+        rel: 0,
+        enablejsapi: 1
+      },
+      events: {
+        onReady: (event) => {
+          setIsVideoPlaying(true);
+        },
+        onStateChange: (event) => {
+          if (event.data === window.YT.PlayerState.PLAYING) {
+            setIsVideoPlaying(true);
+          } else {
+            setIsVideoPlaying(false);
+          }
+        }
+      }
+    });
+
+    return () => {
+      if (playerRef.current && playerRef.current.destroy) {
+        playerRef.current.destroy();
+      }
+    };
+  }, [activeLesson, playerReady]);
+
+  // Track video progress and send to backend every 5 seconds
+  useEffect(() => {
+    if (!isVideoPlaying || !playerRef.current || !enrollment) return;
+
+    const interval = setInterval(async () => {
+      try {
+        const player = playerRef.current;
+        if (player.getCurrentTime && player.getDuration) {
+          const currentTime = player.getCurrentTime();
+          const duration = player.getDuration();
+          
+          if (duration > 0) {
+            const progress = Math.round((currentTime / duration) * 100);
+            setVideoProgress(progress);
+
+            // Send progress update to backend
+            await apiFetch(`/api/progress/update`, {
+              method: 'POST',
+              auth: true,
+              body: JSON.stringify({
+                courseId: id,
+                progress: progress
+              })
+            });
+
+            // Also update lesson completion
+            await apiFetch(`/api/courses/${id}/progress`, {
+              method: 'POST',
+              auth: true,
+              body: JSON.stringify({
+                completedLessonKey: `${activeLesson.moduleIndex}:${activeLesson.lessonIndex}`,
+                timeSpent: 5
+              })
+            });
+
+            // Update local enrollment state
+            const completedKeys = new Set(enrollment?.completedLessonKeys || []);
+            const totalLessons = course?.modules?.reduce((sum, mod) => sum + (mod.lessons?.length || 0), 0) || 0;
+            const lessonProgress = totalLessons > 0 ? Math.round((completedKeys.size / totalLessons) * 100) : 0;
+
+            setEnrollment(prev => ({
+              ...prev,
+              progressPercent: lessonProgress,
+              completedLessonKeys: [...completedKeys, `${activeLesson.moduleIndex}:${activeLesson.lessonIndex}`]
+            }));
+          }
+        }
+      } catch (err) {
+        console.error('Progress update failed:', err);
+      }
+    }, 5000);
+
+    intervalRef.current = interval;
+
+    return () => clearInterval(interval);
+  }, [isVideoPlaying, enrollment, course, id, activeLesson]);
+
   const completedKeys = useMemo(() => new Set(enrollment?.completedLessonKeys || []), [enrollment]);
   const progressPercent = enrollment?.progressPercent ?? 0;
   const modules = course?.modules || [];
@@ -129,6 +251,9 @@ const CourseContent = () => {
     try {
       const data = await apiFetch(`/api/courses/${id}/enroll`, { method: 'POST', auth: true });
       setEnrollment(data.enrollment);
+      // Refresh enrollment data
+      const enrollData = await apiFetch(`/api/enrollments/course/${id}`, { auth: true });
+      setEnrollment(enrollData.enrollment || data.enrollment);
     } catch (e) {
       setError(e.message || 'Failed to enroll');
     }
@@ -150,14 +275,8 @@ const CourseContent = () => {
 
         <div className="bg-gradient-to-br from-gray-900 via-gray-800 to-indigo-950 w-full aspect-video relative group">
           {activeLesson ? (
-            activeLesson.lesson.type === 'video' && getYouTubeVideoId(getLessonVideoUrl(activeLesson.lesson)) ? (
-              <iframe
-                src={`https://www.youtube.com/embed/${getYouTubeVideoId(getLessonVideoUrl(activeLesson.lesson))}`}
-                title={activeLesson.lesson.title}
-                className="w-full h-full"
-                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                allowFullScreen
-              ></iframe>
+            activeLesson.lesson.type === 'video' ? (
+              <div id="youtube-player" className="w-full h-full"></div>
             ) : (
               <div className="absolute inset-0 flex items-center justify-center">
                 <div className="text-center text-white">
@@ -185,15 +304,15 @@ const CourseContent = () => {
             </div>
           )}
           
-          {/* Mock Video Controls - only show for video content */}
+          {/* Video Progress Bar - only show for video content */}
           {activeLesson?.lesson.type === 'video' && (
             <div className="absolute bottom-0 inset-x-0 h-16 bg-gradient-to-t from-black/80 to-transparent flex items-end p-4">
               <div className="w-full flex items-center gap-4 text-white">
                 <PlayCircle className="w-6 h-6" />
                 <div className="flex-1 h-1.5 bg-gray-600 rounded-full overflow-hidden">
-                  <div className="w-1/3 h-full bg-indigo-500 rounded-full"></div>
+                  <div className="h-full bg-indigo-500 rounded-full transition-all duration-300" style={{ width: `${videoProgress}%` }}></div>
                 </div>
-                <span className="text-sm font-medium">05:45 / 25:00</span>
+                <span className="text-sm font-medium">{Math.round(videoProgress)}%</span>
               </div>
             </div>
           )}

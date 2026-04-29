@@ -72,29 +72,68 @@ const Quiz = () => {
     }
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     const questions = quizData?.questions || [];
     const totalQuestions = questions.length;
-    const correctAnswers = questions.reduce((count, question) => {
+    
+    // Prepare answers object for API
+    const answersPayload = {};
+    questions.forEach((question, idx) => {
       const selectedIndex = answers[question.id];
-      if (selectedIndex === undefined) return count;
-      const selectedOption = question.options?.[selectedIndex];
-      return selectedOption === question.correctAnswer ? count + 1 : count;
-    }, 0);
-    const score = totalQuestions ? Math.round((correctAnswers / totalQuestions) * 100) : 0;
-
-    navigate(`/course/${id}/quiz/result`, {
-      state: {
-        result: {
-          score,
-          passed: score >= 60,
-          totalQuestions,
-          correctAnswers,
-          timeSpent: '—',
-          recommendations: [],
-        },
-      },
+      if (selectedIndex !== undefined) {
+        answersPayload[question.id] = question.options?.[selectedIndex] || '';
+      }
     });
+
+    try {
+      setLoading(true);
+      const response = await apiFetch(`/api/quiz/${id}/submit`, {
+        method: 'POST',
+        auth: true,
+        body: JSON.stringify({ answers: answersPayload }),
+      });
+
+      const result = response.result;
+      navigate(`/course/${id}/quiz/result`, {
+        state: {
+          result: {
+            score: result.score,
+            passed: result.passed,
+            totalQuestions: result.totalQuestions,
+            correctAnswers: result.correctAnswers,
+            timeSpent: result.timeSpent,
+            recommendations: result.recommendations || [],
+          },
+        },
+      });
+    } catch (error) {
+      console.error('Quiz submission error:', error);
+      setError('Failed to submit quiz. Please try again.');
+      
+      // Fallback to local calculation if API fails
+      const correctAnswers = questions.reduce((count, question) => {
+        const selectedIndex = answers[question.id];
+        if (selectedIndex === undefined) return count;
+        const selectedOption = question.options?.[selectedIndex];
+        return selectedOption === question.correctAnswer ? count + 1 : count;
+      }, 0);
+      const score = totalQuestions ? Math.round((correctAnswers / totalQuestions) * 100) : 0;
+
+      navigate(`/course/${id}/quiz/result`, {
+        state: {
+          result: {
+            score,
+            passed: score >= 60,
+            totalQuestions,
+            correctAnswers,
+            timeSpent: '—',
+            recommendations: [],
+          },
+        },
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
   const currentQ = quizData?.questions?.[currentQuestion];

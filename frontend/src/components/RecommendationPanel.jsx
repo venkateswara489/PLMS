@@ -3,7 +3,7 @@ import CourseCard from './CourseCard';
 import { Sparkles, ChevronRight } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
-const RecommendationPanel = ({ recommendations }) => {
+const RecommendationPanel = ({ recommendations, reason }) => {
   const recommendedCourses = Array.isArray(recommendations) ? recommendations : [];
 
   return (
@@ -27,7 +27,7 @@ const RecommendationPanel = ({ recommendations }) => {
           </h2>
           
           <p className="text-indigo-200 text-lg max-w-lg">
-            Based on your recent activity, we think you'll love these hand-picked learning paths to accelerate your career.
+            {reason || 'Based on your recent activity, we think you\'ll love these hand-picked learning paths to accelerate your career.'}
           </p>
           
           <Link 

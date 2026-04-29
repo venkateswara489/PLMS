@@ -38,6 +38,7 @@ const courseSchema = new mongoose.Schema(
     difficulty: { type: String, enum: ['beginner', 'intermediate', 'advanced'], default: 'beginner', index: true },
     instructor: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, index: true },
     status: { type: String, enum: ['draft', 'pending', 'published'], default: 'draft', index: true },
+    thumbnail: { type: String, default: '' },
     thumbnailUrl: { type: String, default: '' },
     modules: { type: [moduleSchema], default: [] },
     avgRating: { type: Number, default: 0, min: 0, max: 5 },

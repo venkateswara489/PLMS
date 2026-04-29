@@ -10,10 +10,44 @@ const CourseCard = ({ course }) => {
       ? course.instructor
       : (course.instructor?.name || 'Instructor');
 
+  // Get thumbnail from course
+  const getThumbnail = (course) => {
+    if (course.thumbnail) return course.thumbnail;
+    if (course.thumbnailUrl) return course.thumbnailUrl;
+    // Extract from first video lesson
+    if (course.modules) {
+      for (const module of course.modules) {
+        if (module.lessons) {
+          const videoLesson = module.lessons.find(l => l.type === 'video' && l.contentUrl);
+          if (videoLesson) {
+            const match = videoLesson.contentUrl.match(/(?:v=|youtu\.be\/)([^&]+)/);
+            if (match) return `https://img.youtube.com/vi/${match[1]}/0.jpg`;
+          }
+        }
+      }
+    }
+    return null;
+  };
+
+  const thumbnail = getThumbnail(course);
+
   return (
     <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden hover:shadow-md transition-shadow group flex flex-col h-full">
       <div className="relative aspect-video overflow-hidden bg-gradient-to-br from-indigo-600 via-indigo-500 to-violet-600 flex items-center justify-center">
-        <BookOpen className="w-16 h-16 text-white/85 drop-shadow-sm" aria-hidden />
+        {thumbnail ? (
+          <img 
+            src={thumbnail} 
+            alt={course.title} 
+            className="w-full h-full object-cover"
+            onError={(e) => {
+              e.target.style.display = 'none';
+              e.target.nextElementSibling.style.display = 'flex';
+            }}
+          />
+        ) : null}
+        <div className={`absolute inset-0 flex items-center justify-center ${thumbnail ? 'hidden' : 'flex'}`}>
+          <BookOpen className="w-16 h-16 text-white/85 drop-shadow-sm" aria-hidden />
+        </div>
         <div className="absolute top-3 right-3 bg-white/90 backdrop-blur-sm px-2.5 py-1 rounded-full text-xs font-semibold text-gray-700 shadow-sm flex items-center gap-1.5">
           <Star className="w-3.5 h-3.5 text-yellow-500 fill-current" />
           {rating || '4.5'}

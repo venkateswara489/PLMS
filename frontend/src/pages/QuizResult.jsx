@@ -1,19 +1,62 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link, useLocation, useParams } from 'react-router-dom';
 import { Award, CheckCircle, XCircle, RotateCcw, ArrowRight, BookOpen, PlayCircle } from 'lucide-react';
+import { apiFetch } from '../lib/api';
 
 const QuizResult = () => {
   const { id } = useParams();
   const location = useLocation();
+  const [result, setResult] = useState(location.state?.result || null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
 
-  const result = location.state?.result || null;
+  // Fetch quiz results from database if not provided via navigation state
+  useEffect(() => {
+    if (!result && id) {
+      let cancelled = false;
+      async function fetchResults() {
+        setLoading(true);
+        setError('');
+        try {
+          const data = await apiFetch(`/api/quiz/${id}/results`, { auth: true });
+          if (!cancelled && data.results && data.results.length > 0) {
+            const latestResult = data.results[0];
+            setResult({
+              score: latestResult.score,
+              passed: latestResult.score >= 60,
+              totalQuestions: latestResult.answers?.length || 0,
+              correctAnswers: latestResult.answers?.filter(a => a.isCorrect).length || 0,
+              timeSpent: '—',
+              recommendations: [],
+            });
+          }
+        } catch (e) {
+          if (!cancelled) setError('Failed to load quiz results');
+        } finally {
+          if (!cancelled) setLoading(false);
+        }
+      }
+      fetchResults();
+      return () => { cancelled = true; };
+    }
+  }, [id, result]);
 
   return (
     <div className="bg-gray-50 min-h-[calc(100vh-64px)] py-12 px-4 sm:px-6 lg:px-8 flex items-center justify-center">
       <div className="max-w-3xl w-full">
-        {!result && (
+        {loading && (
           <div className="bg-white rounded-3xl shadow-sm border border-gray-100 p-8 text-center text-gray-600">
-            Quiz results are not available yet (attempt saving is not enabled).
+            Loading quiz results…
+          </div>
+        )}
+        {error && (
+          <div className="bg-white rounded-3xl shadow-sm border border-red-100 p-8 text-center text-red-700">
+            {error}
+          </div>
+        )}
+        {!result && !loading && !error && (
+          <div className="bg-white rounded-3xl shadow-sm border border-gray-100 p-8 text-center text-gray-600">
+            Quiz results are not available yet.
             <div className="mt-6 flex flex-col sm:flex-row gap-4 justify-center">
               <Link
                 to={`/course/${id}/quiz`}

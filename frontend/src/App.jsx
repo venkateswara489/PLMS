@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import RoleBasedNav from './components/RoleBasedNav';
 import Footer from './components/Footer';
@@ -27,6 +27,18 @@ import Settings from './pages/Settings';
 import ProtectedRoute from './components/ProtectedRoute';
 
 function App() {
+  // Initialize auth state on app load
+  useEffect(() => {
+    const token = localStorage.getItem('token');
+    const user = localStorage.getItem('user');
+    
+    if (token && user) {
+      console.log('Auth initialized: User logged in');
+    } else {
+      console.log('Auth initialized: No user logged in');
+    }
+  }, []);
+
   return (
     <Router>
       <div className="flex flex-col min-h-screen">

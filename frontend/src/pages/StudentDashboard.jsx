@@ -16,6 +16,13 @@ const StudentDashboard = () => {
 
   const [enrollments, setEnrollments] = useState([]);
   const [recommendations, setRecommendations] = useState([]);
+  const [recommendationReason, setRecommendationReason] = useState('');
+  const [progressStats, setProgressStats] = useState({
+    totalCourses: 0,
+    completedCourses: 0,
+    completionRate: 0,
+    currentStreak: 0
+  });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -25,13 +32,26 @@ const StudentDashboard = () => {
       setLoading(true);
       setError('');
       try {
-        const [enrollData, recData] = await Promise.all([
+        const user = JSON.parse(localStorage.getItem('user') || '{}');
+        if (!user._id) {
+          throw new Error('User not logged in');
+        }
+
+        const [enrollData, recData, progressData] = await Promise.all([
           apiFetch('/api/enrollments/me', { auth: true }),
           apiFetch('/api/recommendations/me', { auth: true }),
+          apiFetch(`/api/progress/${user._id}`, { auth: true }),
         ]);
         if (cancelled) return;
         setEnrollments(enrollData.enrollments || []);
         setRecommendations(recData.items || []);
+        setRecommendationReason(recData.reason || '');
+        setProgressStats({
+          totalCourses: progressData.totalCourses || 0,
+          completedCourses: progressData.completedCourses || 0,
+          completionRate: progressData.avgProgress || 0,
+          currentStreak: 0
+        });
       } catch (e) {
         if (!cancelled) setError(e.message || 'Failed to load dashboard');
       } finally {
@@ -53,15 +73,6 @@ const StudentDashboard = () => {
         progress: e.progressPercent ?? 0,
       }));
   }, [enrollments]);
-
-  const progressStats = useMemo(() => {
-    const totalCourses = enrolledCourses.length;
-    const coursesCompleted = enrolledCourses.filter((c) => (c.progress ?? 0) >= 100).length;
-    const completionRate = totalCourses === 0
-      ? 0
-      : Math.round(enrolledCourses.reduce((sum, c) => sum + (Number(c.progress) || 0), 0) / totalCourses);
-    return { completionRate, coursesCompleted, totalCourses, currentStreak: 0 };
-  }, [enrolledCourses]);
 
   return (
     <div className="flex h-[calc(100vh-64px)] overflow-hidden bg-gray-50">
@@ -86,7 +97,7 @@ const StudentDashboard = () => {
             </div>
           )}
 
-          <RecommendationPanel recommendations={recommendations} />
+          <RecommendationPanel recommendations={recommendations} reason={recommendationReason} />
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             <div className="lg:col-span-2 space-y-8">

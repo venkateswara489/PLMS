@@ -61,93 +61,261 @@ const seedDB = async () => {
 
     console.log('Users created (student, instructor, admin)...');
 
-    // 2. Create Course (D2)
-    const course1 = await Course.create({
-      title: 'Data Structures',
-      description: 'Learn basic data structures',
-      instructor: instructor._id,
-      category: 'Computer Science',
-      status: 'published',
-      createdAt: new Date('2026-03-20T11:00:00Z')
-    });
-    
-    // Creating a second course just for the ML recommendation example
-    const course2 = await Course.create({
-      title: 'Advanced Arrays',
-      description: 'Deep dive into arrays',
-      instructor: instructor._id,
-      status: 'published',
-      category: 'Computer Science'
-    });
+    // 2. Create Courses with YouTube links
+    const courses = [
+      {
+        title: 'Data Structures Full Course',
+        instructor: instructor._id,
+        category: 'Computer Science',
+        status: 'published',
+        description: 'Complete data structures course by FreeCodeCamp',
+        thumbnailUrl: '',
+        modules: [
+          {
+            title: 'Data Structures Fundamentals',
+            order: 0,
+            lessons: [
+              {
+                title: 'Data Structures Full Course',
+                type: 'video',
+                contentUrl: 'https://www.youtube.com/watch?v=RBSGKlAvoiM',
+                durationSeconds: 14400,
+                order: 0,
+                questions: []
+              }
+            ]
+          }
+        ],
+        createdAt: new Date('2026-03-20T11:00:00Z')
+      },
+      {
+        title: 'Data Structures in 8 Hours',
+        instructor: instructor._id,
+        category: 'Computer Science',
+        status: 'published',
+        description: 'Comprehensive data structures course by CodeHelp',
+        thumbnailUrl: '',
+        modules: [
+          {
+            title: 'Data Structures Deep Dive',
+            order: 0,
+            lessons: [
+              {
+                title: 'Data Structures in 8 Hours',
+                type: 'video',
+                contentUrl: 'https://youtu.be/8hly31xKli0',
+                durationSeconds: 28800,
+                order: 0,
+                questions: []
+              }
+            ]
+          }
+        ],
+        createdAt: new Date('2026-03-20T11:05:00Z')
+      },
+      {
+        title: 'Operating System Basics',
+        instructor: instructor._id,
+        category: 'Operating Systems',
+        status: 'published',
+        description: 'Operating system fundamentals by Neso Academy',
+        thumbnailUrl: '',
+        modules: [
+          {
+            title: 'OS Fundamentals',
+            order: 0,
+            lessons: [
+              {
+                title: 'Operating System Basics',
+                type: 'video',
+                contentUrl: 'https://www.youtube.com/watch?v=26QPDBe-NB8',
+                durationSeconds: 10800,
+                order: 0,
+                questions: []
+              }
+            ]
+          }
+        ],
+        createdAt: new Date('2026-03-20T11:10:00Z')
+      },
+      {
+        title: 'Operating System Crash Course',
+        instructor: instructor._id,
+        category: 'Operating Systems',
+        status: 'published',
+        description: 'Quick OS crash course by Gate Smashers',
+        thumbnailUrl: '',
+        modules: [
+          {
+            title: 'OS Crash Course',
+            order: 0,
+            lessons: [
+              {
+                title: 'Operating System Crash Course',
+                type: 'video',
+                contentUrl: 'https://youtu.be/vBURTt97EkA',
+                durationSeconds: 7200,
+                order: 0,
+                questions: []
+              }
+            ]
+          }
+        ],
+        createdAt: new Date('2026-03-20T11:15:00Z')
+      },
+      {
+        title: 'Machine Learning for Beginners',
+        instructor: instructor._id,
+        category: 'Machine Learning',
+        status: 'published',
+        description: 'ML fundamentals by Simplilearn',
+        thumbnailUrl: '',
+        modules: [
+          {
+            title: 'ML Fundamentals',
+            order: 0,
+            lessons: [
+              {
+                title: 'Machine Learning for Beginners',
+                type: 'video',
+                contentUrl: 'https://www.youtube.com/watch?v=Gv9_4yMHFhI',
+                durationSeconds: 18000,
+                order: 0,
+                questions: []
+              }
+            ]
+          }
+        ],
+        createdAt: new Date('2026-03-20T11:20:00Z')
+      },
+      {
+        title: 'HTML & CSS Full Course',
+        instructor: instructor._id,
+        category: 'Web Development',
+        status: 'published',
+        description: 'Complete HTML & CSS course by Traversy Media',
+        thumbnailUrl: '',
+        modules: [
+          {
+            title: 'HTML & CSS Fundamentals',
+            order: 0,
+            lessons: [
+              {
+                title: 'HTML & CSS Full Course',
+                type: 'video',
+                contentUrl: 'https://youtu.be/UB1O30fR-EE',
+                durationSeconds: 36000,
+                order: 0,
+                questions: []
+              }
+            ]
+          }
+        ],
+        createdAt: new Date('2026-03-20T11:25:00Z')
+      },
+      {
+        title: 'JavaScript Full Course',
+        instructor: instructor._id,
+        category: 'Web Development',
+        status: 'published',
+        description: 'Complete JavaScript course by Programming with Mosh',
+        thumbnailUrl: '',
+        modules: [
+          {
+            title: 'JavaScript Fundamentals',
+            order: 0,
+            lessons: [
+              {
+                title: 'JavaScript Full Course',
+                type: 'video',
+                contentUrl: 'https://www.youtube.com/watch?v=3JluqTojuME',
+                durationSeconds: 21600,
+                order: 0,
+                questions: []
+              }
+            ]
+          }
+        ],
+        createdAt: new Date('2026-03-20T11:30:00Z')
+      },
+      {
+        title: 'MongoDB Full Tutorial',
+        instructor: instructor._id,
+        category: 'Database',
+        status: 'published',
+        description: 'Complete MongoDB tutorial by The Net Ninja',
+        thumbnailUrl: '',
+        modules: [
+          {
+            title: 'MongoDB Fundamentals',
+            order: 0,
+            lessons: [
+              {
+                title: 'MongoDB Full Tutorial',
+                type: 'video',
+                contentUrl: 'https://www.youtube.com/watch?v=ofme2o29ngU',
+                durationSeconds: 25200,
+                order: 0,
+                questions: []
+              }
+            ]
+          }
+        ],
+        createdAt: new Date('2026-03-20T11:35:00Z')
+      }
+    ];
+
+    const createdCourses = await Course.insertMany(courses);
     console.log('Courses created...');
 
-    // 3. Create Modules (D2)
-    const mod1 = await Module.create({ 
-      courseId: course1._id, 
-      title: 'Arrays', 
-      content: 'https://youtube.com/arrays-video', 
-      order: 1 
-    });
-    
-    // Creating a second module for the ML recommendation example
-    const mod2 = await Module.create({ 
-      courseId: course2._id, 
-      title: 'Multidimensional Arrays', 
-      content: 'https://youtube.com/2d-arrays', 
-      order: 1 
-    });
-    console.log('Modules created...');
+    // 3. Create Modules (D2) - Now embedded in courses, skipping separate Module creation
+    // Modules are now part of Course schema
+    console.log('Modules embedded in courses...');
 
-    // 4. Create Quiz (D3)
-    const quiz = await Quiz.create({
-      courseId: course1._id,
-      title: 'Arrays Quiz',
+    // 4. Create Quiz (D3) - Add quiz to first course
+    const firstCourse = createdCourses[0];
+    firstCourse.modules[0].lessons.push({
+      title: 'Data Structures Quiz',
+      type: 'quiz',
+      contentUrl: '',
+      durationSeconds: 0,
+      order: 1,
       questions: [{
         questionText: 'What is an array?',
         options: ['Linear DS', 'Tree', 'Graph', 'Stack'],
         correctAnswer: 'Linear DS'
       }]
     });
-    console.log('Quiz created...');
+    await firstCourse.save();
+    console.log('Quiz added to course...');
 
-    // 5. Create Result (D3)
-    await Result.create({
-      userId: student._id,
-      quizId: quiz._id,
-      score: 80,
-      answers: [{
-        questionId: quiz.questions[0]._id, 
-        selectedOption: 'Linear DS',
-        isCorrect: true
-      }],
-      submittedAt: new Date('2026-03-20T12:00:00Z')
-    });
-    console.log('Result created...');
-
-    // 6. Create Enrollment (D4)
-    await Enrollment.create({ 
-      student: student._id, 
-      course: course1._id,
+    // 5. Create Enrollment (D4)
+    await Enrollment.create({
+      student: student._id,
+      course: firstCourse._id,
+      completedLessonKeys: [],
+      progressPercent: 0,
       enrolledAt: new Date('2026-03-20T11:30:00Z')
     });
     console.log('Enrollment created...');
 
-    // 7. Create Progress (D4)
+    // 6. Create Progress (D4)
     await Progress.create({
       userId: student._id,
-      courseId: course1._id,
-      completedTopics: [mod1._id],
-      timeSpent: 120,
-      progressPercentage: 50
+      courseId: firstCourse._id,
+      completedLessons: [],
+      completedModules: [],
+      timeSpent: 0,
+      progressPercentage: 0
     });
     console.log('Progress created...');
 
-    // 8. Create Recommendation (Extra)
+    // 7. Create Recommendation (Extra)
     await Recommendation.create({
       userId: student._id,
-      recommendedCourses: [course2._id],
-      recommendedTopics: [mod2._id],
-      reason: 'Low score in Arrays topic'
+      recommendedCourses: [createdCourses[1]._id],
+      recommendedTopics: [],
+      reason: 'Based on your learning patterns'
     });
     console.log('Recommendation created...');
 
