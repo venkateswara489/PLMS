@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 360" role="img" aria-labelledby="title desc" preserveAspectRatio="xMidYMid slice">
+  <title>Default course thumbnail</title>
+  <desc>Placeholder image for course thumbnails.</desc>
+  <defs>
+    <linearGradient id="grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#4f46e5" />
+      <stop offset="100%" stop-color="#6366f1" />
+    </linearGradient>
+  </defs>
+  <rect width="640" height="360" fill="url(#grad)" />
+  <g fill="#ffffff" opacity="0.85">
+    <rect x="80" y="72" width="480" height="216" rx="32" />
+    <path d="M160 132h320v96H160z" fill="#eef2ff" opacity="0.5" />
+  </g>
+  <text x="320" y="205" text-anchor="middle" font-family="Inter, sans-serif" font-size="32" fill="#eef2ff" font-weight="700">Course Thumbnail</text>
+</svg>

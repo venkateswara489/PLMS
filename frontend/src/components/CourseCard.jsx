@@ -1,35 +1,50 @@
-import React from 'react';
-import { Link } from 'react-router-dom';
-import { Clock, Users, Star, PlayCircle, BookOpen } from 'lucide-react';
+import React, { useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import { Clock, Users, Star, PlayCircle, BookOpen, X } from 'lucide-react';
+import { getThumbnail } from '../helpers/thumbnailHelper';
+import { apiFetch } from '../lib/api';
 
-const CourseCard = ({ course }) => {
+const CourseCard = ({ course, onUnenroll }) => {
   const courseId = course.id || course._id;
   const rating = course.rating ?? course.avgRating ?? '4.5';
   const instructorName =
     typeof course.instructor === 'string'
       ? course.instructor
       : (course.instructor?.name || 'Instructor');
-
-  // Get thumbnail from course
-  const getThumbnail = (course) => {
-    if (course.thumbnail) return course.thumbnail;
-    if (course.thumbnailUrl) return course.thumbnailUrl;
-    // Extract from first video lesson
-    if (course.modules) {
-      for (const module of course.modules) {
-        if (module.lessons) {
-          const videoLesson = module.lessons.find(l => l.type === 'video' && l.contentUrl);
-          if (videoLesson) {
-            const match = videoLesson.contentUrl.match(/(?:v=|youtu\.be\/)([^&]+)/);
-            if (match) return `https://img.youtube.com/vi/${match[1]}/0.jpg`;
-          }
-        }
-      }
-    }
-    return null;
-  };
+  const [isUnenrolling, setIsUnenrolling] = useState(false);
+  const navigate = useNavigate();
 
   const thumbnail = getThumbnail(course);
+
+  const handleUnenroll = async (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    if (!confirm('Are you sure you want to unenroll from this course?')) {
+      return;
+    }
+
+    setIsUnenrolling(true);
+    try {
+      await apiFetch(`/api/enrollments/${courseId}`, {
+        method: 'DELETE',
+        auth: true
+      });
+      
+      // Call parent callback to update UI
+      if (onUnenroll) {
+        onUnenroll(courseId);
+      }
+      
+      // Refresh the page to update state
+      navigate(0);
+    } catch (error) {
+      console.error('Unenroll failed:', error);
+      alert('Failed to unenroll. Please try again.');
+    } finally {
+      setIsUnenrolling(false);
+    }
+  };
 
   return (
     <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden hover:shadow-md transition-shadow group flex flex-col h-full">
@@ -37,11 +52,11 @@ const CourseCard = ({ course }) => {
         {thumbnail ? (
           <img 
             src={thumbnail} 
-            alt={course.title} 
+            alt={course.title || 'Course thumbnail'} 
             className="w-full h-full object-cover"
             onError={(e) => {
-              e.target.style.display = 'none';
-              e.target.nextElementSibling.style.display = 'flex';
+              e.target.onerror = null;
+              e.target.src = "/default-thumbnail.svg";
             }}
           />
         ) : null}
@@ -82,13 +97,26 @@ const CourseCard = ({ course }) => {
           </div>
         </div>
 
-        <Link
-          to={`/course/${courseId}`}
-          className="mt-4 flex items-center justify-center gap-2 w-full bg-gray-50 hover:bg-indigo-600 outline-none hover:text-white text-indigo-600 py-2.5 rounded-xl font-medium transition-all group/btn"
-        >
-          <PlayCircle className="w-5 h-5 group-hover/btn:scale-110 transition-transform" />
-          <span>{course.enrolled ? 'Continue Course' : 'Enroll Now'}</span>
-        </Link>
+        <div className="mt-4 flex gap-2">
+          <Link
+            to={`/course/${courseId}`}
+            className="flex-1 flex items-center justify-center gap-2 bg-gray-50 hover:bg-indigo-600 outline-none hover:text-white text-indigo-600 py-2.5 rounded-xl font-medium transition-all group/btn"
+          >
+            <PlayCircle className="w-5 h-5 group-hover/btn:scale-110 transition-transform" />
+            <span>{course.enrolled ? 'Continue Course' : 'Enroll Now'}</span>
+          </Link>
+          
+          {course.enrolled && (
+            <button
+              onClick={handleUnenroll}
+              disabled={isUnenrolling}
+              className="flex items-center justify-center gap-2 px-4 py-2.5 bg-red-50 hover:bg-red-600 text-red-600 hover:text-white rounded-xl font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              title="Unenroll from course"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          )}
+        </div>
       </div>
     </div>
   );

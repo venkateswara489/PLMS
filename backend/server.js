@@ -49,5 +49,9 @@ mongoose.connect(process.env.MONGO_URI || 'mongodb://localhost:27017/plms')
     app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
   })
   .catch((err) => {
+    console.error('Failed to connect to MongoDB:', err);
+    process.exit(1);
+  })
+  .catch((err) => {
     console.error('MongoDB connection error:', err);
   });

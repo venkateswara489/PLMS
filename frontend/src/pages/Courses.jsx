@@ -79,7 +79,7 @@ const Courses = () => {
 
         {/* Categories Bar */}
         <div className="flex overflow-x-auto pb-2 gap-3 hide-scrollbar">
-          {['All Courses', 'Development', 'Design', 'Data Science', 'Marketing', 'Business', 'Photography'].map((cat) => {
+          {['All Courses', 'Web Development', 'Database', 'Computer Science', 'Operating Systems', 'Machine Learning'].map((cat) => {
             const isSelected = selectedCategory === cat;
             return (
               <button

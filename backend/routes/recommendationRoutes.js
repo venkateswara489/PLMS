@@ -108,7 +108,7 @@ router.get('/me', requireAuth, requireRole('student'), async (req, res) => {
       }
 
       const items = await Course.find(query)
-        .select('title description category difficulty instructor status thumbnail thumbnailUrl avgRating ratingsCount createdAt')
+        .select('title description category difficulty instructor status thumbnail thumbnailUrl avgRating ratingsCount createdAt modules')
         .populate('instructor', 'name role')
         .sort({ avgRating: -1, createdAt: -1 })
         .limit(6);
@@ -162,7 +162,7 @@ router.get('/me', requireAuth, requireRole('student'), async (req, res) => {
     if (interests.length > 0) query.category = { $in: interests };
 
     const items = await Course.find(query)
-      .select('title description category difficulty instructor status thumbnail thumbnailUrl avgRating ratingsCount createdAt')
+      .select('title description category difficulty instructor status thumbnail thumbnailUrl avgRating ratingsCount createdAt modules')
       .populate('instructor', 'name role')
       .sort({ avgRating: -1, createdAt: -1 })
       .limit(6);

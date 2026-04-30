@@ -2,7 +2,7 @@ import mongoose from 'mongoose';
 
 const submissionAnswerSchema = new mongoose.Schema({
   questionId: {
-    type: mongoose.Schema.Types.ObjectId,
+    type: String,
     required: true
   },
   selectedOption: {

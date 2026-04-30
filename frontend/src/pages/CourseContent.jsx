@@ -14,8 +14,16 @@ const CourseContent = () => {
   const [videoProgress, setVideoProgress] = useState(0);
   const [isVideoPlaying, setIsVideoPlaying] = useState(false);
   const [playerReady, setPlayerReady] = useState(false);
+  const [completedLessons, setCompletedLessons] = useState(new Set());
   const playerRef = useRef(null);
   const intervalRef = useRef(null);
+
+  // Initialize completed lessons from enrollment
+  useEffect(() => {
+    if (enrollment?.completedLessonKeys) {
+      setCompletedLessons(new Set(enrollment.completedLessonKeys));
+    }
+  }, [enrollment]);
 
   const getYouTubeVideoId = (url) => {
     if (!url || typeof url !== 'string') return null;
@@ -115,7 +123,7 @@ const CourseContent = () => {
     }
   }, [course, activeLesson]);
 
-  // Load YouTube IFrame API
+    // Load YouTube IFrame API
   useEffect(() => {
     if (!window.YT) {
       const tag = document.createElement('script');
@@ -175,11 +183,11 @@ const CourseContent = () => {
     };
   }, [activeLesson, playerReady]);
 
-  // Track video progress and send to backend every 5 seconds
+  // Track video progress for display only (no auto-completion)
   useEffect(() => {
-    if (!isVideoPlaying || !playerRef.current || !enrollment) return;
+    if (!isVideoPlaying || !playerRef.current) return;
 
-    const interval = setInterval(async () => {
+    const interval = setInterval(() => {
       try {
         const player = playerRef.current;
         if (player.getCurrentTime && player.getDuration) {
@@ -189,51 +197,20 @@ const CourseContent = () => {
           if (duration > 0) {
             const progress = Math.round((currentTime / duration) * 100);
             setVideoProgress(progress);
-
-            // Send progress update to backend
-            await apiFetch(`/api/progress/update`, {
-              method: 'POST',
-              auth: true,
-              body: JSON.stringify({
-                courseId: id,
-                progress: progress
-              })
-            });
-
-            // Also update lesson completion
-            await apiFetch(`/api/courses/${id}/progress`, {
-              method: 'POST',
-              auth: true,
-              body: JSON.stringify({
-                completedLessonKey: `${activeLesson.moduleIndex}:${activeLesson.lessonIndex}`,
-                timeSpent: 5
-              })
-            });
-
-            // Update local enrollment state
-            const completedKeys = new Set(enrollment?.completedLessonKeys || []);
-            const totalLessons = course?.modules?.reduce((sum, mod) => sum + (mod.lessons?.length || 0), 0) || 0;
-            const lessonProgress = totalLessons > 0 ? Math.round((completedKeys.size / totalLessons) * 100) : 0;
-
-            setEnrollment(prev => ({
-              ...prev,
-              progressPercent: lessonProgress,
-              completedLessonKeys: [...completedKeys, `${activeLesson.moduleIndex}:${activeLesson.lessonIndex}`]
-            }));
           }
         }
       } catch (err) {
-        console.error('Progress update failed:', err);
+        console.error('Progress tracking failed:', err);
       }
-    }, 5000);
+    }, 1000);
 
     intervalRef.current = interval;
 
     return () => clearInterval(interval);
-  }, [isVideoPlaying, enrollment, course, id, activeLesson]);
+  }, [isVideoPlaying]);
 
   const completedKeys = useMemo(() => new Set(enrollment?.completedLessonKeys || []), [enrollment]);
-  const progressPercent = enrollment?.progressPercent ?? 0;
+  const progressPercent = Math.min(100, Math.max(0, enrollment?.progressPercent ?? 0));
   const modules = course?.modules || [];
 
   const getIconForType = (type, completed, isCurrent) => {
@@ -259,6 +236,63 @@ const CourseContent = () => {
     }
   };
 
+  const handleMarkAsCompleted = async () => {
+    console.log('Mark as Completed clicked');
+    
+    if (!activeLesson) {
+      console.log('No active lesson found');
+      return;
+    }
+    
+    const lessonId = `${activeLesson.moduleIndex}:${activeLesson.lessonIndex}`;
+    const userId = user?._id;
+    console.log('User ID:', userId, 'Lesson ID:', lessonId, 'Course ID:', id);
+    
+    if (!userId) {
+      console.log('No user ID found');
+      setError('User not logged in');
+      return;
+    }
+    
+    try {
+      console.log('Sending API request to /api/progress/complete');
+      const response = await apiFetch('/api/progress/complete', {
+        method: 'POST',
+        auth: true,
+        body: {
+          userId,
+          courseId: id,
+          lessonId
+        }
+      });
+
+      console.log('API Response:', response);
+
+      if (response.success) {
+        console.log('Lesson marked as completed successfully');
+
+        setCompletedLessons(prev => new Set([...prev, lessonId]));
+
+        if (enrollment) {
+          setEnrollment(prev => ({
+            ...prev,
+            progressPercent: response.progressPercentage,
+            completedLessonKeys: response.completedLessons
+          }));
+        }
+
+        setError(response.message || 'Lesson marked as completed');
+        setTimeout(() => setError(''), 3000);
+      } else {
+        console.log('API returned failure:', response);
+        setError(response.message || 'Failed to mark lesson as completed');
+      }
+    } catch (e) {
+      console.error('Error marking lesson as completed:', e);
+      setError(e.message || 'Failed to mark lesson as completed');
+    }
+  };
+
   return (
     <div className="flex flex-col lg:flex-row h-[calc(100vh-64px)] bg-gray-50 overflow-hidden">
       
@@ -269,14 +303,18 @@ const CourseContent = () => {
         )}
         {error && (
           <div className="p-6">
-            <div className="bg-white border border-red-100 text-red-700 rounded-2xl p-4">{error}</div>
+            <div className={`border rounded-2xl p-4 ${
+              error.includes('completed') || error.includes('Course completed')
+                ? 'bg-green-50 border-green-100 text-green-700'
+                : 'bg-white border-red-100 text-red-700'
+            }`}>{error}</div>
           </div>
         )}
 
-        <div className="bg-gradient-to-br from-gray-900 via-gray-800 to-indigo-950 w-full aspect-video relative group">
+        <div className="bg-gradient-to-br from-gray-900 via-gray-800 to-indigo-950 w-full aspect-video relative">
           {activeLesson ? (
             activeLesson.lesson.type === 'video' ? (
-              <div id="youtube-player" className="w-full h-full"></div>
+              <div id="youtube-player" className="w-full h-full" style={{ pointerEvents: 'auto' }}></div>
             ) : (
               <div className="absolute inset-0 flex items-center justify-center">
                 <div className="text-center text-white">
@@ -303,20 +341,29 @@ const CourseContent = () => {
               </div>
             </div>
           )}
-          
-          {/* Video Progress Bar - only show for video content */}
-          {activeLesson?.lesson.type === 'video' && (
-            <div className="absolute bottom-0 inset-x-0 h-16 bg-gradient-to-t from-black/80 to-transparent flex items-end p-4">
-              <div className="w-full flex items-center gap-4 text-white">
-                <PlayCircle className="w-6 h-6" />
-                <div className="flex-1 h-1.5 bg-gray-600 rounded-full overflow-hidden">
-                  <div className="h-full bg-indigo-500 rounded-full transition-all duration-300" style={{ width: `${videoProgress}%` }}></div>
-                </div>
-                <span className="text-sm font-medium">{Math.round(videoProgress)}%</span>
-              </div>
-            </div>
-          )}
         </div>
+
+        {/* Mark as Completed Button */}
+        {activeLesson && enrollment && user?.role === 'student' && (
+          <div className="p-6 lg:px-10">
+            <div className="max-w-5xl mx-auto">
+              {completedLessons.has(`${activeLesson.moduleIndex}:${activeLesson.lessonIndex}`) ? (
+                <div className="inline-flex items-center px-4 py-2 bg-green-100 text-green-700 rounded-xl font-medium">
+                  <CheckCircle className="w-5 h-5 mr-2" />
+                  Completed
+                </div>
+              ) : (
+                <button
+                  onClick={handleMarkAsCompleted}
+                  className="inline-flex items-center px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-medium transition-colors"
+                >
+                  <CheckCircle className="w-5 h-5 mr-2" />
+                  Mark as Completed
+                </button>
+              )}
+            </div>
+          </div>
+        )}
 
         <div className="p-6 lg:p-10 max-w-5xl mx-auto w-full">
           <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 mb-8">

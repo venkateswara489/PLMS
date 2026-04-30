@@ -143,5 +143,39 @@ router.get('/course/:courseId', requireAuth, requireRole('student'), async (req,
   return res.json({ enrollment: { ...updatedEnrollment.toObject(), course: courseObj } });
 });
 
+// Student: unenroll from a course
+router.delete('/:courseId', requireAuth, requireRole('student'), async (req, res) => {
+  try {
+    console.log('DELETE /api/enrollments/:courseId called');
+    console.log('User ID:', req.user._id);
+    console.log('Course ID:', req.params.courseId);
+
+    const { courseId } = req.params;
+
+    // Delete enrollment
+    const enrollment = await Enrollment.findOneAndDelete({
+      student: req.user._id,
+      course: courseId
+    });
+
+    if (!enrollment) {
+      console.log('Enrollment not found');
+      return res.status(404).json({ message: 'Enrollment not found' });
+    }
+
+    // Also delete progress record
+    await Progress.findOneAndDelete({
+      userId: req.user._id,
+      courseId: courseId
+    });
+
+    console.log('Unenrollment successful');
+    return res.json({ message: 'Successfully unenrolled from course' });
+  } catch (error) {
+    console.error('Unenroll error:', error);
+    return res.status(500).json({ message: 'Failed to unenroll', error: error.message });
+  }
+});
+
 export default router;
 

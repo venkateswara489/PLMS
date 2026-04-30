@@ -18,31 +18,20 @@ const Quiz = () => {
       setLoading(true);
       setError('');
       try {
-        // Minimal “real data” source: course detail. If no quizzes exist yet, show empty state.
-        const data = await apiFetch(`/api/courses/${id}`);
-        const course = data.course;
+        // Use new quiz API endpoint
+        const quizData = await apiFetch(`/api/quiz/${id}`, { auth: true });
+        console.log('Quiz data received:', quizData);
 
-        const quizLessons = (course?.modules || []).flatMap((m) =>
-          (m.lessons || []).filter((l) => l.type === 'quiz' && Array.isArray(l.questions) && l.questions.length > 0)
-        );
-
-        const firstQuiz = quizLessons[0] || null;
-        if (!firstQuiz) {
-          setQuizData({ title: 'Quiz', timeRemaining: '—', questions: [] });
-        } else {
-          setQuizData({
-            title: firstQuiz.title || 'Quiz',
-            timeRemaining: '—',
-            questions: firstQuiz.questions.map((q, idx) => ({
-              id: idx + 1,
-              question: q.questionText,
-              options: q.options,
-              correctAnswer: q.correctAnswer,
-            })),
-          });
-        }
+        setQuizData({
+          title: quizData.title || 'Quiz',
+          timeRemaining: '—',
+          questions: quizData.questions || []
+        });
       } catch (e) {
-        if (!cancelled) setError(e.message || 'Failed to load quiz');
+        if (!cancelled) {
+          console.error('Failed to load quiz:', e);
+          setError(e.message || 'Failed to load quiz');
+        }
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -85,13 +74,18 @@ const Quiz = () => {
       }
     });
 
+    console.log('Quiz submission payload:', { courseId: id, answers: answersPayload });
+    console.log('Questions:', questions);
+
     try {
       setLoading(true);
       const response = await apiFetch(`/api/quiz/${id}/submit`, {
         method: 'POST',
         auth: true,
-        body: JSON.stringify({ answers: answersPayload }),
+        body: { answers: answersPayload },
       });
+
+      console.log('Quiz submission response:', response);
 
       const result = response.result;
       navigate(`/course/${id}/quiz/result`, {
@@ -103,6 +97,9 @@ const Quiz = () => {
             correctAnswers: result.correctAnswers,
             timeSpent: result.timeSpent,
             recommendations: result.recommendations || [],
+            progressPercentage: result.progressPercentage,
+            completedLessons: result.completedLessons,
+            isCompleted: result.isCompleted,
           },
         },
       });

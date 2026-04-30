@@ -51,7 +51,8 @@ PLMS (Personal Learning Management System) is a comprehensive full-stack web app
    ```bash
    cd backend
    npm install
-   # Configure your MongoDB connection in server.js or environment variables
+   cp .env.example .env
+   # Edit .env and set MONGO_URI to your MongoDB connection string
    npm start
    ```
 

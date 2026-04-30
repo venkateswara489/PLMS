@@ -2,13 +2,13 @@ import React from 'react';
 import { TrendingUp, Award, Target } from 'lucide-react';
 
 const ProgressChart = ({ stats }) => {
-  // A simple placeholder for a progress chart
-  const defaultStats = stats || {
-    completionRate: 68,
-    coursesCompleted: 4,
-    totalCourses: 7,
+  // Use actual stats from backend or fallback to defaults
+  const defaultStats = {
+    completionRate: stats?.completionRate || 0,
+    coursesCompleted: stats?.completedCourses || 0,
+    totalCourses: stats?.totalCourses || 0,
     learningHours: 32,
-    currentStreak: 5,
+    currentStreak: stats?.currentStreak || 0,
   };
 
   return (

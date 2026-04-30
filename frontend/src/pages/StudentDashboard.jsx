@@ -23,6 +23,7 @@ const StudentDashboard = () => {
     completionRate: 0,
     currentStreak: 0
   });
+  const [quizResults, setQuizResults] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -37,21 +38,57 @@ const StudentDashboard = () => {
           throw new Error('User not logged in');
         }
 
-        const [enrollData, recData, progressData] = await Promise.all([
+        const [enrollResult, recResult, progressResult, quizResult] = await Promise.allSettled([
           apiFetch('/api/enrollments/me', { auth: true }),
           apiFetch('/api/recommendations/me', { auth: true }),
           apiFetch(`/api/progress/${user._id}`, { auth: true }),
+          apiFetch('/api/quiz/results/me', { auth: true }),
         ]);
         if (cancelled) return;
-        setEnrollments(enrollData.enrollments || []);
-        setRecommendations(recData.items || []);
-        setRecommendationReason(recData.reason || '');
-        setProgressStats({
-          totalCourses: progressData.totalCourses || 0,
-          completedCourses: progressData.completedCourses || 0,
-          completionRate: progressData.avgProgress || 0,
-          currentStreak: 0
-        });
+
+        if (enrollResult.status === 'fulfilled') {
+          setEnrollments(enrollResult.value.enrollments || []);
+        } else {
+          console.warn('Enrollments failed', enrollResult.reason);
+          setEnrollments([]);
+        }
+
+        if (recResult.status === 'fulfilled') {
+          setRecommendations(recResult.value.items || []);
+          setRecommendationReason(recResult.value.reason || '');
+        } else {
+          console.warn('Recommendations failed', recResult.reason);
+          setRecommendations([]);
+          setRecommendationReason('');
+        }
+
+        if (progressResult.status === 'fulfilled') {
+          setProgressStats({
+            totalCourses: progressResult.value.totalCourses || 0,
+            completedCourses: progressResult.value.completedCourses || 0,
+            completionRate: progressResult.value.avgProgress || 0,
+            currentStreak: 0
+          });
+        } else {
+          console.warn('Progress failed', progressResult.reason);
+          setProgressStats({
+            totalCourses: 0,
+            completedCourses: 0,
+            completionRate: 0,
+            currentStreak: 0
+          });
+        }
+
+        if (quizResult.status === 'fulfilled') {
+          setQuizResults(quizResult.value.results || []);
+        } else {
+          console.warn('Quiz results failed', quizResult.reason);
+          setQuizResults([]);
+        }
+
+        if ([enrollResult, recResult, progressResult].some((r) => r.status === 'rejected')) {
+          throw new Error('Some dashboard data failed to load. Check the console for details.');
+        }
       } catch (e) {
         if (!cancelled) setError(e.message || 'Failed to load dashboard');
       } finally {
@@ -126,9 +163,31 @@ const StudentDashboard = () => {
               <section>
                 <h2 className="text-xl font-bold text-gray-900 mb-4">Recent Quizzes</h2>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="col-span-full bg-white rounded-2xl border border-gray-100 p-6 text-gray-600">
-                    Quiz attempts will appear here once quiz endpoints are enabled for your courses.
-                  </div>
+                  {loading ? (
+                    <div className="col-span-full bg-white rounded-2xl border border-gray-100 p-6 text-gray-600">
+                      Loading quiz history…
+                    </div>
+                  ) : quizResults.length > 0 ? (
+                    quizResults.map((result) => (
+                      <div key={result.id} className="bg-white rounded-2xl border border-gray-100 p-6 shadow-sm">
+                        <div className="text-sm font-semibold text-gray-700">{result.courseTitle}</div>
+                        <div className="mt-3 flex items-center justify-between gap-4">
+                          <div>
+                            <p className="text-3xl font-bold text-gray-900">{result.score}%</p>
+                            <p className="text-sm text-gray-500">{result.passed ? 'Passed' : 'Needs review'}</p>
+                          </div>
+                          <div className={`rounded-full px-3 py-1 text-xs font-semibold ${result.passed ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`}>
+                            {result.totalQuestions} questions
+                          </div>
+                        </div>
+                        <p className="mt-4 text-sm text-gray-500">{new Date(result.submittedAt).toLocaleDateString()}</p>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="col-span-full bg-white rounded-2xl border border-gray-100 p-6 text-gray-600">
+                      Quiz attempts will appear here once quiz endpoints are enabled for your courses.
+                    </div>
+                  )}
                 </div>
               </section>
             </div>
