@@ -11,5 +11,9 @@ export default defineConfig({
         changeOrigin: true,
       }
     }
+  },
+  // Production build configuration
+  define: {
+    'import.meta.env.VITE_API_URL': JSON.stringify('https://plms-2xk7.onrender.com')
   }
 })

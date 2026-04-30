@@ -13,7 +13,10 @@ export async function apiFetch(path, { method = 'GET', body, headers, auth = fal
     if (token) finalHeaders.Authorization = `Bearer ${token}`;
   }
 
-  const res = await fetch(path, {
+  // Use full API URL in production, relative path in development
+  const apiUrl = import.meta.env.DEV ? path : `https://plms-2xk7.onrender.com${path}`;
+
+  const res = await fetch(apiUrl, {
     method,
     headers: finalHeaders,
     body: body ? JSON.stringify(body) : undefined,
